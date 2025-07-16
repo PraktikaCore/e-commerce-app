@@ -119,6 +119,55 @@
     ./build_n_push.sh
     ```
     Если вы не меняете код, вы можете пропустить этот шаг, так как Kubernetes скачает готовые образы `moira121/*:latest`.
+    Результат:
+    ```
+      moira@mynote:/opt/_home/retail-store-microservices$ ./build_n_push.sh 
+      --- Cleaning up old Ingress resources ---
+      --- Applying Kubernetes & Istio Manifests ---
+      gateway.networking.istio.io/retail-gateway unchanged
+      virtualservice.networking.istio.io/retail-virtualservice unchanged
+      peerauthentication.security.istio.io/retail-peer-auth unchanged
+      service/swagger-ui-service unchanged
+      deployment.apps/swagger-ui-deployment configured
+      service/recommendation-service unchanged
+      deployment.apps/recommendation-deployment configured
+      service/order-service unchanged
+      deployment.apps/order-deployment configured
+      service/user-service unchanged
+      deployment.apps/user-deployment configured
+      service/inventory-service unchanged
+      deployment.apps/inventory-deployment configured
+      service/product-service unchanged
+      deployment.apps/product-deployment configured
+      deployment.apps/inventory-deployment restarted
+      deployment.apps/order-deployment restarted
+      deployment.apps/product-deployment restarted
+      deployment.apps/recommendation-deployment restarted
+      deployment.apps/swagger-ui-deployment restarted
+      deployment.apps/user-deployment restarted
+      NAME                                         READY   STATUS        RESTARTS   AGE
+      inventory-deployment-544d956c6-pl4h2         2/2     Running       0          11h
+      inventory-deployment-544d956c6-wp2vw         2/2     Running       0          11h
+      inventory-deployment-5cfb558f96-xtcjg        0/2     Terminating   0          1s
+      inventory-deployment-7996457846-8rvxl        0/2     Init:0/1      0          0s
+      order-deployment-65fc5bbbd-884st             2/2     Running       0          11h
+      order-deployment-65fc5bbbd-bnfj5             2/2     Running       0          11h
+      order-deployment-6f987bc778-4pzb5            0/2     Init:0/1      0          0s
+      order-deployment-8fcbcb59b-scnn7             0/2     Terminating   0          2s
+      product-deployment-c88d97995-j4vx7           0/2     Terminating   0          1s
+      product-deployment-d7b9fd659-b8lr6           2/2     Running       0          11h
+      product-deployment-d7b9fd659-clvjx           2/2     Running       0          11h
+      recommendation-deployment-854b9cff9c-58qhf   0/2     Terminating   0          2s
+      recommendation-deployment-869d465c8f-jsvqn   2/2     Running       0          11h
+      recommendation-deployment-869d465c8f-rzqk7   2/2     Running       0          11h
+      swagger-ui-deployment-64f97458db-cqfkt       0/2     Terminating   0          3s
+      swagger-ui-deployment-876d7776b-46b4q        2/2     Running       0          11h
+      swagger-ui-deployment-876d7776b-h5rhl        2/2     Running       0          11h
+      user-deployment-544d9c4b7b-2tzw9             2/2     Running       0          11h
+      user-deployment-544d9c4b7b-nmbp6             2/2     Running       0          11h
+      user-deployment-5995bf6-9dkvb                0/2     Init:0/1      0          1s
+
+    ```
 
 5.  **Настройка локального DNS**
     Добавьте следующую запись в ваш файл `/etc/hosts`:
@@ -257,6 +306,8 @@ spec:
   ```
 - **Возможности**: Позволяет просматривать состояние подов, деплойментов, сервисов, читать логи и выполнять базовые операции в графическом интерфейсе.
 
+![minikube dashboard](assets/my-dashboard.png)
+
 ### Kiali + Prometheus
 **Kiali** — это мощный инструмент для визуализации и мониторинга service mesh Istio. Он использует данные, собранные **Prometheus**.
 - **Установка**:
@@ -280,3 +331,27 @@ spec:
   - **Мониторинг трафика**: Отображает метрики запросов (RPS, задержки, ошибки).
   - **Статус mTLS**: На графе сервисов замочек (🔒) на соединении показывает, что трафик шифруется с помощью mTLS.
   - **Просмотр конфигураций Istio**: Позволяет удобно просматривать и валидировать `Gateway`, `VirtualService` и другие ресурсы.
+
+![kiali graph](assets/my-kiali.png)
+
+
+## Примеры использования сервисов платформы
+
+Примеры показаны с помощью web-интерфейса swagger/openapi, развернутого в том же кластере.
+![swaggerui](assets/my-swagger.png)
+
+## Получение списка товаров на складе
+
+![swagger-inventory](assets/my-inventory-list.png)
+
+## Получение со склада данных о товаре с идентификатором 2
+
+![swagger-inventory-2](assets/my-inventory-2.png)
+
+## Создание заказа на 4 еденицы товара с идентификатором 1
+
+![swagger-order-2](assets/my-order-1.png)
+
+## Получение информации о пользователе с идентификатором 1
+
+![swagger-user-1](assets/my-swagger-user-1.png)
