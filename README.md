@@ -188,6 +188,7 @@
     ```
     результат - external-ip=pending :
     | NAME | TYPE | CLUSTER-IP | EXTERNAL-IP | PORT(S) | AGE |
+    | --- | --- | --- | --- | --- | --- | 
     | istio-ingressgateway | LoadBalancer | 10.108.146.210  | <Pending> | 15021:31169/TCP,80:32341/TCP,443:31222/TCP,31400:32376/TCP,15443:32470/TCP  | 12h |
 
     воспользуемся небольшим трюком, чтоб заставить кубер присвоить внешний IP нашему гейтвею:
@@ -214,6 +215,7 @@
       moira@mynote:/opt/_home/istio-1.26.2/bin$ minikube kubectl -- -n istio-system get service istio-ingressgateway
     ```
     | NAME | TYPE | CLUSTER-IP | EXTERNAL-IP | PORT(S) | AGE |
+    | --- | --- | --- | --- | --- | --- | 
     | istio-ingressgateway | LoadBalancer | 10.108.146.210  | 10.108.146.210 | 15021:31169/TCP,80:32341/TCP,443:31222/TCP,31400:32376/TCP,15443:32470/TCP  | 12h |
 
     именно этот IP и прописываем в /etc/hosts
