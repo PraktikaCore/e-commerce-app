@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: user
-          image: drjabber/user-service:latest
+          image: moira121/user-service:latest
           ports:
             - containerPort: 5004
           readinessProbe:

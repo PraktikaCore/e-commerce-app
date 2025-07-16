@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: recommendation
-          image: drjabber/recommendation-service:latest
+          image: moira121/recommendation-service:latest
           ports:
             - containerPort: 5003
           readinessProbe:
