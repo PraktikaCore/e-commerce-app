@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: product
-        image: drjabber/product-service:latest
+        image: moira121/product-service:latest
         ports:
         - containerPort: 5001
         readinessProbe:

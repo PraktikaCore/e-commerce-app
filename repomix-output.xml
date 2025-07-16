@@ -1,0 +1,1334 @@
+<repomix><file_summary>This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+The content has been processed where content has been formatted for parsing in xml style.<purpose>This file contains a packed representation of the entire repository&apos;s contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.</purpose><file_format>The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Repository files, each consisting of:
+  - File path as an attribute
+  - Full contents of the file</file_format><usage_guidelines>- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.</usage_guidelines><notes>- Some files may have been excluded based on .gitignore rules and Repomix&apos;s configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Content has been formatted for parsing in xml style
+- Files are sorted by Git change count (files with more changes are at the bottom)</notes></file_summary><directory_structure>autoscaling/
+  inventory-hpa.yaml
+  order-hpa.yaml
+  product-hpa.yaml
+  recommendations-hpa.yaml
+  user-hpa.yaml
+inventory-service/
+  app.py
+  Dockerfile
+  requirements.txt
+k8s-manifests/
+  help.md
+  ingress.yaml
+  inventory-service.yaml
+  istio-gateway.yaml
+  istio-virtualservice.yaml
+  mtls-policy.yaml
+  order-service.yaml
+  product-service.yaml
+  recommendation-service.yaml
+  swagger-ingress.yaml
+  swagger-ui-service.yaml
+  user-service.yaml
+order-service/
+  app.py
+  Dockerfile
+  requirements.txt
+product-service/
+  app.py
+  Dockerfile
+  requirements.txt
+recommendation-service/
+  app.py
+  Dockerfile
+  requirements.txt
+swagger-ui-service/
+  app.py
+  Dockerfile
+  requirements.txt
+user-service/
+  app.py
+  Dockerfile
+  requirements.txt
+.gitignore
+build_n_push.sh
+README.md</directory_structure><files>This section contains the contents of the repository&apos;s files.<file path="k8s-manifests/istio-gateway.yaml"># k8s-manifests/istio-gateway.yaml
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: retail-gateway
+  namespace: retail
+spec:
+  selector:
+    # Use the default Istio Ingress Gateway
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    # Listen for requests on our host
+    - &quot;mariia.local&quot;</file><file path="k8s-manifests/istio-virtualservice.yaml"># k8s-manifests/istio-virtualservice.yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: retail-virtualservice
+  namespace: retail
+spec:
+  hosts:
+  - &quot;mariia.local&quot;
+  gateways:
+  - retail-gateway
+  http:
+  - match:
+    - uri:
+        prefix: &quot;/product&quot;
+    rewrite:
+      uri: &quot;/&quot;
+    route:
+    - destination:
+        host: product-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: &quot;/order&quot;
+    rewrite:
+      uri: &quot;/&quot;
+    route:
+    - destination:
+        host: order-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: &quot;/inventory&quot;
+    rewrite:
+      uri: &quot;/&quot;
+    route:
+    - destination:
+        host: inventory-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: &quot;/recommendation&quot;
+    rewrite:
+      uri: &quot;/&quot;
+    route:
+    - destination:
+        host: recommendation-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: &quot;/user&quot;
+    rewrite:
+      uri: &quot;/&quot;
+    route:
+    - destination:
+        host: user-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: &quot;/swagger&quot;
+    route:
+    - destination:
+        host: swagger-ui-service.retail.svc.cluster.local
+        port:
+          number: 80</file><file path="k8s-manifests/mtls-policy.yaml">apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: &quot;default&quot;
+  namespace: &quot;retail&quot;
+spec:
+  mtls:
+    mode: STRICT</file><file path="k8s-manifests/swagger-ingress.yaml"># k8s-manifests/ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swagger-retail-ingress
+  namespace: retail
+  annotations:
+    # Enable the rewrite engine
+    nginx.ingress.kubernetes.io/use-regex: &quot;true&quot;
+    # For each path, capture the part after the service prefix and use it as the new target.
+    # The /$2 refers to the second capture group (.*) in the path regex.
+    nginx.ingress.kubernetes.io/rewrite-target: /swagger/$2
+
+spec:
+  rules:
+  - host: mariia.local
+    http:
+      paths:
+      # The regex (.*) captures everything after /product/
+      # The (/|$) handles requests for both /product and /product/
+      - path: /swagger(/)(apispec.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: swagger-ui-service
+            port:
+              number: 80
+      - path: /swagger(/|$)(apidocs/.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: swagger-ui-service
+            port:
+              number: 80
+      - path: /swagger(/|$)(flasgger_static/.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: swagger-ui-service
+            port:
+              number: 80</file><file path="k8s-manifests/swagger-ui-service.yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: swagger-ui-service
+  namespace: retail
+spec:
+  selector:
+    app: swagger-ui
+  ports:
+    - port: 80
+      targetPort: 5006
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swagger-ui-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swagger-ui
+  template:
+    metadata:
+      labels:
+        app: swagger-ui
+    spec:
+      containers:
+        - name: swagger-ui
+          image: moira121/swagger-ui-service:latest
+          ports:
+            - containerPort: 5006
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5006
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 5</file><file path="swagger-ui-service/app.py">from flask import Flask, jsonify
+from flasgger import Swagger
+
+app = Flask(__name__)
+
+swagger_template = {
+    &quot;swagger&quot;: &quot;2.0&quot;,
+    &quot;info&quot;: {
+        &quot;title&quot;: &quot;E-commerce Microservices API&quot;,
+        &quot;description&quot;: &quot;API documentation for all e-commerce microservices.&quot;,
+        &quot;version&quot;: &quot;1.0.0&quot;
+    },
+    &quot;host&quot;: &quot;mariia.local&quot;,  # This should be your ingress host
+    &quot;basePath&quot;: &quot;/&quot;,
+    &quot;schemes&quot;: [
+        &quot;http&quot;
+    ],
+    &quot;paths&quot;: {
+        &quot;/product/list&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;Get all products&quot;,
+                &quot;tags&quot;: [&quot;Product&quot;],
+                &quot;produces&quot;: [&quot;application/json&quot;],
+                &quot;responses&quot;: {
+                    &quot;200&quot;: {
+                        &quot;description&quot;: &quot;A list of products.&quot;
+                    }
+                }
+            }
+        },
+        &quot;/product/{product_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;Get a specific product&quot;,
+                &quot;tags&quot;: [&quot;Product&quot;],
+                &quot;produces&quot;: [&quot;application/json&quot;],
+                &quot;parameters&quot;: [
+                    {
+                        &quot;name&quot;: &quot;product_id&quot;,
+                        &quot;in&quot;: &quot;path&quot;,
+                        &quot;required&quot;: True,
+                        &quot;type&quot;: &quot;integer&quot;
+                    }
+                ],
+                &quot;responses&quot;: {
+                    &quot;200&quot;: {
+                        &quot;description&quot;: &quot;Product details.&quot;
+                    },
+                    &quot;404&quot;: {
+                        &quot;description&quot;: &quot;Product not found.&quot;
+                    }
+                }
+            }
+        },
+        &quot;/order/create&quot;: {
+            &quot;post&quot;: {
+                &quot;summary&quot;: &quot;Create an order&quot;,
+                &quot;tags&quot;: [&quot;Order&quot;],
+                &quot;produces&quot;: [&quot;application/json&quot;],
+                &quot;consumes&quot;: [&quot;application/json&quot;],
+                &quot;parameters&quot;: [
+                    {
+                        &quot;name&quot;: &quot;body&quot;,
+                        &quot;in&quot;: &quot;body&quot;,
+                        &quot;required&quot;: True,
+                        &quot;schema&quot;: {
+                            &quot;type&quot;: &quot;object&quot;,
+                            &quot;properties&quot;: {
+                                &quot;product_id&quot;: {
+                                    &quot;type&quot;: &quot;integer&quot;
+                                },
+                                &quot;quantity&quot;: {
+                                    &quot;type&quot;: &quot;integer&quot;
+                                }
+                            }
+                        }
+                    }
+                ],
+                &quot;responses&quot;: {
+                    &quot;201&quot;: {
+                        &quot;description&quot;: &quot;Order created.&quot;
+                    },
+                    &quot;400&quot;: {
+                        &quot;description&quot;: &quot;Invalid input.&quot;
+                    }
+                }
+            }
+        },
+        &quot;/user/list&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;Get all users&quot;,
+                &quot;tags&quot;: [&quot;User&quot;],
+                &quot;produces&quot;: [&quot;application/json&quot;],
+                &quot;responses&quot;: {
+                    &quot;200&quot;: {
+                        &quot;description&quot;: &quot;A list of users.&quot;
+                    }
+                }
+            }
+        },
+        &quot;/user/{user_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;Get a specific user&quot;,
+                &quot;tags&quot;: [&quot;User&quot;],
+                &quot;produces&quot;: [&quot;application/json&quot;],
+                &quot;parameters&quot;: [
+                    {
+                        &quot;name&quot;: &quot;user_id&quot;,
+                        &quot;in&quot;: &quot;path&quot;,
+                        &quot;required&quot;: True,
+                        &quot;type&quot;: &quot;integer&quot;
+                    }
+                ],
+                &quot;responses&quot;: {
+                    &quot;200&quot;: {
+                        &quot;description&quot;: &quot;User details.&quot;
+                    },
+                    &quot;404&quot;: {
+                        &quot;description&quot;: &quot;User not found.&quot;
+                    }
+                }
+            }
+        },
+        &quot;/inventory/list&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;List all inventory&quot;,
+                &quot;tags&quot;: [&quot;Inventory&quot;],
+                &quot;produces&quot;: [&quot;application/json&quot;],
+                &quot;responses&quot;: {
+                    &quot;200&quot;: {
+                        &quot;description&quot;: &quot;A list of inventory stock.&quot;
+                    }
+                }
+            }
+        },
+        &quot;/inventory/{product_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;Get stock for a product&quot;,
+                &quot;tags&quot;: [&quot;Inventory&quot;],
+                &quot;produces&quot;: [&quot;application/json&quot;],
+                &quot;parameters&quot;: [
+                    {
+                        &quot;name&quot;: &quot;product_id&quot;,
+                        &quot;in&quot;: &quot;path&quot;,
+                        &quot;required&quot;: True,
+                        &quot;type&quot;: &quot;integer&quot;
+                    }
+                ],
+                &quot;responses&quot;: {
+                    &quot;200&quot;: {
+                        &quot;description&quot;: &quot;Stock details.&quot;
+                    }
+                }
+            }
+        },
+        &quot;/recommendation/for-user/{user_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;Get recommendations for a user&quot;,
+                &quot;tags&quot;: [&quot;Recommendation&quot;],
+                &quot;produces&quot;: [&quot;application/json&quot;],
+                &quot;parameters&quot;: [
+                    {
+                        &quot;name&quot;: &quot;user_id&quot;,
+                        &quot;in&quot;: &quot;path&quot;,
+                        &quot;required&quot;: True,
+                        &quot;type&quot;: &quot;string&quot;
+                    }
+                ],
+                &quot;responses&quot;: {
+                    &quot;200&quot;: {
+                        &quot;description&quot;: &quot;List of recommendations.&quot;
+                    }
+                }
+            }
+        }
+    }
+}
+
+swagger_config = {
+    &quot;static_url_path&quot;: &quot;/flasgger_static&quot;,  
+    &quot;url_prefix&quot;: &quot;/swagger&quot;
+}
+
+swagger = Swagger(app, template=swagger_template, config=swagger_config, merge=True)
+
+@app.route(&apos;/health&apos;)
+def health():
+    return &apos;OK&apos;, 200
+
+if __name__ == &quot;__main__&quot;:
+    app.run(host=&apos;0.0.0.0&apos;, port=5006)</file><file path="swagger-ui-service/Dockerfile">FROM python:3.8-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
+COPY . .
+
+CMD [&quot;python3&quot;, &quot;app.py&quot;]</file><file path="swagger-ui-service/requirements.txt">Flask==3.0.2
+gunicorn==20.1.0
+requests==2.31.0
+# flask-restx==1.3.0
+flasgger==0.9.7.1</file><file path="autoscaling/inventory-hpa.yaml">apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inventory-hpa
+  namespace: retail
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inventory-deployment
+  minReplicas: 2
+  maxReplicas: 12
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50</file><file path="autoscaling/order-hpa.yaml">apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-hpa
+  namespace: retail
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-deployment
+  minReplicas: 2
+  maxReplicas: 12
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50</file><file path="autoscaling/product-hpa.yaml">apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: product-hpa
+  namespace: retail
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: product-deployment
+  minReplicas: 2
+  maxReplicas: 12
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50</file><file path="autoscaling/recommendations-hpa.yaml">apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: recommentdations-hpa
+  namespace: retail
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: recommendations-deployment
+  minReplicas: 2
+  maxReplicas: 13
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50</file><file path="autoscaling/user-hpa.yaml">apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: user-hpa
+  namespace: retail
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: user-deployment
+  minReplicas: 2
+  maxReplicas: 12
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50</file><file path="inventory-service/Dockerfile">FROM python:3.8-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
+COPY . .
+
+#CMD [ &quot;python3&quot;, &quot;-m&quot; , &quot;flask&quot;, &quot;run&quot;, &quot;--host=0.0.0.0&quot;]
+CMD [&quot;python3&quot;, &quot;app.py&quot;]</file><file path="k8s-manifests/inventory-service.yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: retail
+spec:
+  selector:
+    app: inventory
+  ports:
+    - port: 80
+      targetPort: 5005
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory
+  template:
+    metadata:
+      labels:
+        app: inventory
+    spec:
+      containers:
+        - name: inventory
+          image: moira121/inventory-service:latest
+          ports:
+            - containerPort: 5005
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5005
+            initialDelaySeconds: 5
+            periodSeconds: 10</file><file path="k8s-manifests/order-service.yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: retail
+spec:
+  selector:
+    app: order
+  ports:
+    - port: 80
+      targetPort: 5002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order
+  template:
+    metadata:
+      labels:
+        app: order
+    spec:
+      containers:
+        - name: order
+          image: moira121/order-service:latest
+          ports:
+            - containerPort: 5002
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            initialDelaySeconds: 5
+            periodSeconds: 10</file><file path="k8s-manifests/product-service.yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: retail
+spec:
+  selector:
+    app: product
+  ports:
+    - port: 80
+      targetPort: 5001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product
+  template:
+    metadata:
+      labels:
+        app: product
+    spec:
+      containers:
+      - name: product
+        image: moira121/product-service:latest
+        ports:
+        - containerPort: 5001
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 5
+          periodSeconds: 10</file><file path="k8s-manifests/recommendation-service.yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation-service
+  namespace: retail
+spec:
+  selector:
+    app: recommendation
+  ports:
+    - port: 80
+      targetPort: 5003
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: recommendation
+  template:
+    metadata:
+      labels:
+        app: recommendation
+    spec:
+      containers:
+        - name: recommendation
+          image: moira121/recommendation-service:latest
+          ports:
+            - containerPort: 5003
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5003
+            initialDelaySeconds: 5
+            periodSeconds: 10</file><file path="k8s-manifests/user-service.yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: retail
+spec:
+  selector:
+    app: user
+  ports:
+    - port: 80
+      targetPort: 5004
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user
+  template:
+    metadata:
+      labels:
+        app: user
+    spec:
+      containers:
+        - name: user
+          image: moira121/user-service:latest
+          ports:
+            - containerPort: 5004
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5004
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 5</file><file path="order-service/Dockerfile">FROM python:3.8-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
+COPY . .
+
+CMD [&quot;python3&quot;, &quot;app.py&quot;]</file><file path="product-service/Dockerfile">FROM python:3.8-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
+COPY . .
+
+CMD [&quot;python3&quot;, &quot;app.py&quot;]</file><file path="recommendation-service/Dockerfile">FROM python:3.8-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
+COPY . .
+
+CMD [&quot;python3&quot;, &quot;app.py&quot;]</file><file path="user-service/Dockerfile">FROM python:3.8-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
+COPY . .
+
+CMD [&quot;python3&quot;, &quot;app.py&quot;]</file><file path="k8s-manifests/help.md">kubectl create namespace retail
+minikube addons enable ingress
+minikube ip
+
+for redeploy images
+
+# Restart a specific deployment
+kubectl rollout restart deployment/product-deployment -n retail
+
+# Or, restart all deployments in your namespace at once
+kubectl rollout restart deployment -n retail
+
+istio:
+curl -L https://istio.io/downloadIstio | sh -
+cd istio-*
+export PATH=$PWD/bin:$PATH
+
+istioctl install --set profile=demo -y
+
+minikube kubectl -- label namespace retail istio-injection=enabled
+
+to check mtls:
+
+istioctl ps (all should be SYNCED)
+
+find istio ingress IP
+      
+minikube service istio-ingressgateway -n istio-system --url
+
+istioctl analyze -n retail</file><file path=".gitignore">__pycache__/
+.env
+venv/</file><file path="build_n_push.sh">#!/bin/bash
+alias kubectl=&quot;minikube kubectl --&quot;
+
+docker build -t moira121/swagger-ui-service:latest ./swagger-ui-service
+docker build -t moira121/recommendation-service:latest ./recommendation-service
+docker build -t moira121/user-service:latest ./user-service
+docker build -t moira121/inventory-service:latest ./inventory-service
+docker build -t moira121/order-service:latest ./order-service
+docker build -t moira121/product-service:latest ./product-service
+
+docker push moira121/recommendation-service:latest
+docker push moira121/user-service:latest
+docker push moira121/product-service:latest
+docker push moira121/order-service:latest
+docker push moira121/inventory-service:latest
+docker push moira121/swagger-ui-service:latest
+
+# minikube kubectl -- apply -f k8s-manifests/ingress.yaml
+# minikube kubectl -- apply -f k8s-manifests/swagger-ingress.yaml
+
+echo &quot;--- Cleaning up old Ingress resources ---&quot;
+minikube kubectl -- delete ingress retail-ingress -n retail --ignore-not-found
+minikube kubectl -- delete ingress swagger-retail-ingress -n retail --ignore-not-found
+
+echo &quot;--- Applying Kubernetes &amp; Istio Manifests ---&quot;
+minikube kubectl -- apply -f k8s-manifests/istio-gateway.yaml
+minikube kubectl -- apply -f k8s-manifests/istio-virtualservice.yaml
+
+# Apply the mTLS policy
+minikube kubectl -- apply -f k8s-manifests/mtls-policy.yaml
+
+minikube kubectl -- apply -f k8s-manifests/swagger-ui-service.yaml
+minikube kubectl -- apply -f k8s-manifests/recommendation-service.yaml
+minikube kubectl -- apply -f k8s-manifests/order-service.yaml
+minikube kubectl -- apply -f k8s-manifests/user-service.yaml
+minikube kubectl -- apply -f k8s-manifests/inventory-service.yaml
+minikube kubectl -- apply -f k8s-manifests/product-service.yaml
+
+minikube kubectl -- rollout restart deployment -n retail
+
+minikube kubectl -- get pods -n retail</file><file path="README.md"># Retail Store Microservices Application
+
+## Overview
+A cloud-native e-commerce platform built with 5 containerized microservices, orchestrated using Kubernetes. Demonstrates modern DevOps practices including CI/CD readiness, horizontal autoscaling, and centralized configuration.
+
+## Architecture
+### Microservices
+| Service           | Tech Stack      | Port | Description                          | Docker Image                     |
+|-------------------|----------------|------|--------------------------------------|----------------------------------|
+| Product           | Python/Flask   | 5001 | Product catalog management           | yourprofilename/product-service:latest   |
+| Order             | Python/Flask   | 5002 | Order processing system              | yourprofilename/order-service:latest     |
+| User              | Python/Flask   | 5003 | Customer account management          | yourprofilename/user-service:latest      |
+| Inventory         | Python/Flask   | 5005 | Real-time stock tracking             | yourprofilename/inventory-service:latest |
+| Recommendation    | Python/Flask   | 5003 | Personalized suggestions             | yourprofilename/recommendation-service:latest |
+
+### Kubernetes Components
+- **Ingress**: Routes traffic to services via `mariia.local`
+- **Horizontal Pod Autoscaler**: Auto-scales Product and Order services
+- **Health Checks**: Readiness probes on `/health` endpoint
+- **Service Discovery**: Internal DNS-based communication
+
+## Prerequisites
+- Docker 20.10+
+- Kubernetes cluster (Minikube v1.25+ or cloud provider)
+- `kubectl` 1.24+
+- `minikube` with ingress addon enabled (`minikube addons enable ingress`)
+- Python 3.9+ (for Flask services)
+
+## Deployment
+### 1. Build and Push Images
+For each service (e.g., `product-service`):
+```bash
+docker build -t yourprofilename/product-service:latest ./product-service
+docker push yourprofilename/product-service:latest
+# Repeat for other services
+```
+
+### 2. Apply Kubernetes Manifests
+```bash
+kubectl apply -f product-service.yaml
+kubectl apply -f order-service.yaml
+kubectl apply -f user-service.yaml
+kubectl apply -f inventory-service.yaml
+kubectl apply -f recommendation-service.yaml
+kubectl apply -f ingress.yaml
+kubectl apply -f product-hpa.yaml
+kubectl apply -f order-hpa.yaml
+```
+
+### 3. Verify Deployment
+```bash
+kubectl get all -n retail
+kubectl get ingress -n retail
+```
+
+## API Endpoints
+| Service       | Path               | Method | Description                  |
+|---------------|--------------------|--------|------------------------------|
+| Product       | /product           | GET    | Get product catalog          |
+| Product       | /product/{id}           | GET    | Get product by id          |
+| Order         | /order             | POST   | Create new order             |
+| User          | /user/{id}         | GET    | Get user details             |
+| Inventory     | /inventory/{id}    | GET    | Check product stock          |
+| Recommendation| /recommendation/{id}    | GET    | Get product recommendations  |
+
+## API Documentation (Swagger)
+
+Each service provides OpenAPI documentation via Swagger UI. Once deployed, the documentation is accessible through the Ingress:
+
+- Product Service: http://mariia.local/product/docs/
+- Order Service: http://mariia.local/order/docs/
+- User Service: http://mariia.local/user/docs/
+- Inventory Service: http://mariia.local/inventory/docs/
+- Recommendation Service: http://mariia.local/recommendation/docs/
+
+## Health Checks
+All services expose a health endpoint:
+```bash
+curl http://mariia.local/order/health
+```
+
+## Troubleshooting
+1. **CrashLoopBackOff**:
+   ```bash
+   kubectl logs &lt;pod-name&gt; -n retail --previous
+   ```
+
+2. **Ingress 404 Errors**:
+   - Verify hostname resolution
+   - Check rewrite-target annotation
+
+3. **HPA Not Scaling**:
+   ```bash
+   kubectl describe hpa -n retail
+   kubectl top pods -n retail
+   ```
+
+**Note**: For local development, add to your `/etc/hosts`:
+```
+&lt;minikube-ip&gt; mariia.local
+```</file><file path="inventory-service/requirements.txt">Flask==3.0.2
+gunicorn==20.1.0
+requests==2.31.0
+# flask-restx==1.3.0
+flasgger==0.9.7.1</file><file path="k8s-manifests/ingress.yaml"># k8s-manifests/ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: retail-ingress
+  namespace: retail
+  annotations:
+    # Enable the rewrite engine
+    nginx.ingress.kubernetes.io/use-regex: &quot;true&quot;
+    # For each path, capture the part after the service prefix and use it as the new target.
+    # The /$2 refers to the second capture group (.*) in the path regex.
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+spec:
+  rules:
+  - host: mariia.local
+    http:
+      paths:
+      # The regex (.*) captures everything after /product/
+      # The (/|$) handles requests for both /product and /product/
+      - path: /product(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: product-service
+            port:
+              number: 80
+      - path: /order(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: order-service
+            port:
+              number: 80
+      - path: /inventory(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: inventory-service
+            port:
+              number: 80
+      - path: /recommendation(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: recommendation-service
+            port:
+              number: 80
+      - path: /user(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 80</file><file path="order-service/requirements.txt">Flask==2.3.2
+gunicorn==20.1.0
+requests==2.31.0
+# flask-restx==1.3.0
+flasgger==0.9.7.1</file><file path="product-service/requirements.txt">Flask==3.0.2
+gunicorn==20.1.0
+requests==2.31.0
+# flask-restx==1.3.0
+flasgger==0.9.7.1</file><file path="recommendation-service/requirements.txt">Flask==2.3.2
+gunicorn==20.1.0
+requests==2.31.0
+# flask-restx==1.3.0
+flasgger==0.9.7.1</file><file path="user-service/requirements.txt">Flask==3.0.2
+gunicorn==20.1.0
+requests==2.31.0
+# flask-restx==1.3.0
+flasgger==0.9.7.1</file><file path="inventory-service/app.py">from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+stock_db = [
+    {&quot;id&quot;: 1, &quot;stock&quot;: 50},
+    {&quot;id&quot;: 2, &quot;stock&quot;: 200}
+]
+
+@app.route(&apos;/list&apos;, methods=[&apos;GET&apos;])
+def list_stock():
+    &quot;&quot;&quot;
+    List inventory
+    ---
+    tags:
+      - Inventory Operations
+    responses:
+      200:
+        description: A list of stock levels
+        schema:
+          type: array
+          items:
+            $ref: &apos;#/definitions/StockLevel&apos;
+    &quot;&quot;&quot;
+    return jsonify(stock_db)
+
+@app.route(&apos;/&lt;int:product_id&gt;&apos;, methods=[&apos;GET&apos;])
+def get_stock_level(product_id):
+    &quot;&quot;&quot;
+    Get the current stock level for a product
+    ---
+    tags:
+      - Inventory Operations
+    parameters:
+      - name: product_id
+        in: path
+        type: integer
+        required: true
+        description: The product identifier
+    responses:
+      200:
+        description: The current stock level
+        schema:
+          $ref: &apos;#/definitions/StockLevel&apos;
+    definitions:
+      StockLevel:
+        type: object
+        properties:
+          id:
+            type: integer
+            description: The product unique identifier
+          stock:
+            type: integer
+            description: Available stock quantity
+    &quot;&quot;&quot;
+    product = next((p for p in stock_db if p[&quot;id&quot;] == product_id), None)
+    quantity = product[&quot;stock&quot;] if product else 0
+    return jsonify({&quot;product_id&quot;: product_id, &quot;stock&quot;: quantity})
+
+@app.route(&apos;/health&apos;)
+def health():
+    return &apos;OK&apos;, 200
+
+if __name__ == &apos;__main__&apos;:
+    app.run(host=&apos;0.0.0.0&apos;, port=5005)</file><file path="order-service/app.py">from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route(&apos;/create&apos;, methods=[&apos;POST&apos;])
+def create_order():
+    &quot;&quot;&quot;
+    Create a new order
+    ---
+    tags:
+      - Order Operations
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          id: OrderRequest
+          required:
+            - product_id
+          properties:
+            product_id:
+              type: integer
+              description: ID of the product to order
+            quantity:
+              type: integer
+              description: Quantity to order
+              default: 1
+    responses:
+      201:
+        description: Order created successfully
+        schema:
+          id: OrderResponse
+          properties:
+            message:
+              type: string
+              description: Status message
+            product:
+              $ref: &apos;#/definitions/ProductInfo&apos;
+      404:
+        description: Product not found
+      500:
+        description: Internal Server Error
+    definitions:
+      ProductInfo:
+        type: object
+        properties:
+          id:
+            type: integer
+          name:
+            type: string
+          price:
+            type: number
+            format: float
+    &quot;&quot;&quot;
+    data = request.get_json()
+    product_id = data.get(&apos;product_id&apos;)
+
+    try:
+        product_response = requests.get(f&quot;http://product-service/{product_id}&quot;)
+        product_response.raise_for_status()
+        product_data = product_response.json()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            return jsonify({&quot;error&quot;: f&quot;Product ID {product_id} not found in Product Service.&quot;}), 404
+        else:
+            return jsonify({&quot;error&quot;: f&quot;Error from Product Service: {e}&quot;}), 500
+    except Exception as e:
+        return jsonify({&quot;error&quot;: f&quot;Could not connect to Product Service: {e}&quot;}), 500
+
+    return jsonify({
+        &apos;message&apos;: &apos;Order created&apos;,
+        &apos;product&apos;: product_data
+    }), 201
+
+@app.route(&apos;/health&apos;)
+def health():
+    return &apos;OK&apos;, 200
+
+if __name__ == &apos;__main__&apos;:
+    app.run(host=&apos;0.0.0.0&apos;, port=5002)</file><file path="product-service/app.py">from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+products_db = [
+    {&quot;id&quot;: 1, &quot;name&quot;: &quot;Laptop&quot;, &quot;price&quot;: 350.25},
+    {&quot;id&quot;: 2, &quot;name&quot;: &quot;Smartphone&quot;, &quot;price&quot;: 400.00},
+    {&quot;id&quot;: 3, &quot;name&quot;: &quot;Headphones&quot;, &quot;price&quot;: 149.99}
+]
+
+@app.route(&apos;/list&apos;, methods=[&apos;GET&apos;])
+def list_products():
+    &quot;&quot;&quot;
+    List all products
+    ---
+    tags:
+      - Product Operations
+    responses:
+      200:
+        description: A list of products
+        schema:
+          type: array
+          items:
+            $ref: &apos;#/definitions/Product&apos;
+    &quot;&quot;&quot;
+    return jsonify(products_db)
+
+@app.route(&apos;/&lt;int:product_id&gt;&apos;, methods=[&apos;GET&apos;])
+def get_product(product_id):
+    &quot;&quot;&quot;
+    Fetch a product given its identifier
+    ---
+    tags:
+      - Product Operations
+    parameters:
+      - name: product_id
+        in: path
+        type: integer
+        required: true
+        description: The product identifier
+    responses:
+      200:
+        description: The requested product
+        schema:
+          $ref: &apos;#/definitions/Product&apos;
+      404:
+        description: Product not found
+    definitions:
+      Product:
+        type: object
+        properties:
+          id:
+            type: integer
+            description: The product unique identifier
+          name:
+            type: string
+            description: The product name
+          price:
+            type: number
+            format: float
+            description: The product price
+    &quot;&quot;&quot;
+    product = next((p for p in products_db if p[&quot;id&quot;] == product_id), None)
+    if product:
+        return jsonify(product)
+    return jsonify({&quot;error&quot;: f&quot;Product {product_id} not found&quot;}), 404
+
+@app.route(&apos;/health&apos;)
+def health():
+    return &apos;OK&apos;, 200
+
+if __name__ == &apos;__main__&apos;:
+    app.run(host=&apos;0.0.0.0&apos;, port=5001)</file><file path="recommendation-service/app.py">from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route(&apos;/for-user/&lt;string:user_id&gt;&apos;, methods=[&apos;GET&apos;])
+def get_recommendations(user_id):
+    &quot;&quot;&quot;
+    Get recommendations for a specific user
+    ---
+    tags:
+      - Recommendation Operations
+    parameters:
+      - name: user_id
+        in: path
+        type: string
+        required: true
+        description: The user identifier
+    responses:
+      200:
+        description: A list of recommendations for the user
+        schema:
+          id: Recommendation
+          properties:
+            user_id:
+              type: string
+              description: The user identifier
+            recommendations:
+              type: array
+              items:
+                type: string
+              description: List of recommended product IDs
+    &quot;&quot;&quot;
+    # Dummy recommendations
+    return jsonify({&quot;user_id&quot;: user_id, &quot;recommendations&quot;: [&quot;1&quot;, &quot;2&quot;]})
+
+@app.route(&apos;/health&apos;)
+def health():
+    return &apos;OK&apos;, 200
+
+if __name__ == &apos;__main__&apos;:
+    app.run(host=&apos;0.0.0.0&apos;, port=5003)</file><file path="user-service/app.py">from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+# In-memory data store
+users_db = [
+    {&quot;id&quot;: 1, &quot;name&quot;: &quot;Alice&quot;, &quot;email&quot;: &quot;alice@example.com&quot;},
+    {&quot;id&quot;: 2, &quot;name&quot;: &quot;Bob&quot;, &quot;email&quot;: &quot;bob@example.com&quot;}
+]
+
+@app.route(&apos;/list&apos;, methods=[&apos;GET&apos;])
+def list_users():
+    &quot;&quot;&quot;
+    List all users
+    ---
+    tags:
+      - User Operations
+    responses:
+      200:
+        description: A list of users
+        schema:
+          type: array
+          items:
+            $ref: &apos;#/definitions/User&apos;
+    &quot;&quot;&quot;
+    return jsonify(users_db)
+
+@app.route(&apos;/&lt;int:user_id&gt;&apos;, methods=[&apos;GET&apos;])
+def get_user(user_id):
+    &quot;&quot;&quot;
+    Fetch a user given their identifier
+    ---
+    tags:
+      - User Operations
+    parameters:
+      - name: user_id
+        in: path
+        type: integer
+        required: true
+        description: The user identifier
+    responses:
+      200:
+        description: The requested user
+        schema:
+          $ref: &apos;#/definitions/User&apos;
+      404:
+        description: User not found
+    definitions:
+      User:
+        type: object
+        properties:
+          id:
+            type: integer
+            description: The user unique identifier
+          name:
+            type: string
+            description: The user name
+          email:
+            type: string
+            description: The user email
+    &quot;&quot;&quot;
+    user = next((user for user in users_db if user[&quot;id&quot;] == user_id), None)
+    if user:
+        return jsonify(user)
+    return jsonify({&quot;error&quot;: f&quot;User {user_id} not found&quot;}), 404
+
+@app.route(&apos;/health&apos;)
+def health():
+    return &apos;OK&apos;, 200
+
+if __name__ == &apos;__main__&apos;:
+    app.run(host=&apos;0.0.0.0&apos;, port=5004)</file></files></repomix>

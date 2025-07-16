@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: order
-          image: drjabber/order-service:latest
+          image: moira121/order-service:latest
           ports:
             - containerPort: 5002
           readinessProbe:

@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: swagger-ui
-          image: drjabber/swagger-ui-service:latest
+          image: moira121/swagger-ui-service:latest
           ports:
             - containerPort: 5006
           readinessProbe:
