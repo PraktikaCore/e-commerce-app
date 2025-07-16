@@ -1,0 +1,70 @@
+# k8s-manifests/istio-virtualservice.yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: retail-virtualservice
+  namespace: retail
+spec:
+  hosts:
+  - "mariia.local"
+  gateways:
+  - retail-gateway
+  http:
+  - match:
+    - uri:
+        prefix: "/product"
+    rewrite:
+      uri: "/"
+    route:
+    - destination:
+        host: product-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: "/order"
+    rewrite:
+      uri: "/"
+    route:
+    - destination:
+        host: order-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: "/inventory"
+    rewrite:
+      uri: "/"
+    route:
+    - destination:
+        host: inventory-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: "/recommendation"
+    rewrite:
+      uri: "/"
+    route:
+    - destination:
+        host: recommendation-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: "/user"
+    rewrite:
+      uri: "/"
+    route:
+    - destination:
+        host: user-service.retail.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: "/swagger"
+    route:
+    - destination:
+        host: swagger-ui-service.retail.svc.cluster.local
+        port:
+          number: 80

@@ -1,0 +1,42 @@
+# k8s-manifests/ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swagger-retail-ingress
+  namespace: retail
+  annotations:
+    # Enable the rewrite engine
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # For each path, capture the part after the service prefix and use it as the new target.
+    # The /$2 refers to the second capture group (.*) in the path regex.
+    nginx.ingress.kubernetes.io/rewrite-target: /swagger/$2
+
+spec:
+  rules:
+  - host: mariia.local
+    http:
+      paths:
+      # The regex (.*) captures everything after /product/
+      # The (/|$) handles requests for both /product and /product/
+      - path: /swagger(/)(apispec.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: swagger-ui-service
+            port:
+              number: 80
+      - path: /swagger(/|$)(apidocs/.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: swagger-ui-service
+            port:
+              number: 80
+      - path: /swagger(/|$)(flasgger_static/.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: swagger-ui-service
+            port:
+              number: 80

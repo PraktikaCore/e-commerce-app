@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: retail
+spec:
+  selector:
+    app: product
+  ports:
+    - port: 80
+      targetPort: 5001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product
+  template:
+    metadata:
+      labels:
+        app: product
+    spec:
+      containers:
+      - name: product
+        image: drjabber/product-service:latest
+        ports:
+        - containerPort: 5001
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
