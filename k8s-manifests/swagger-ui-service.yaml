@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: swagger-ui-service
+  namespace: retail
+spec:
+  selector:
+    app: swagger-ui
+  ports:
+    - port: 80
+      targetPort: 5006
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swagger-ui-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swagger-ui
+  template:
+    metadata:
+      labels:
+        app: swagger-ui
+    spec:
+      containers:
+        - name: swagger-ui
+          image: drjabber/swagger-ui-service:latest
+          ports:
+            - containerPort: 5006
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5006
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 5

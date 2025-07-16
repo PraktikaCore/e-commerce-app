@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: retail
+spec:
+  selector:
+    app: user
+  ports:
+    - port: 80
+      targetPort: 5004
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user
+  template:
+    metadata:
+      labels:
+        app: user
+    spec:
+      containers:
+        - name: user
+          image: drjabber/user-service:latest
+          ports:
+            - containerPort: 5004
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5004
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 5

@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: retail
+spec:
+  selector:
+    app: order
+  ports:
+    - port: 80
+      targetPort: 5002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-deployment
+  namespace: retail
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order
+  template:
+    metadata:
+      labels:
+        app: order
+    spec:
+      containers:
+        - name: order
+          image: drjabber/order-service:latest
+          ports:
+            - containerPort: 5002
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+

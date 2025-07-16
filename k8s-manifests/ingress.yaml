@@ -1,0 +1,56 @@
+# k8s-manifests/ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: retail-ingress
+  namespace: retail
+  annotations:
+    # Enable the rewrite engine
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # For each path, capture the part after the service prefix and use it as the new target.
+    # The /$2 refers to the second capture group (.*) in the path regex.
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+spec:
+  rules:
+  - host: mariia.local
+    http:
+      paths:
+      # The regex (.*) captures everything after /product/
+      # The (/|$) handles requests for both /product and /product/
+      - path: /product(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: product-service
+            port:
+              number: 80
+      - path: /order(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: order-service
+            port:
+              number: 80
+      - path: /inventory(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: inventory-service
+            port:
+              number: 80
+      - path: /recommendation(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: recommendation-service
+            port:
+              number: 80
+      - path: /user(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 80

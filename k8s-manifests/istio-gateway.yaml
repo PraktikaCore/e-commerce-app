@@ -1,0 +1,17 @@
+# k8s-manifests/istio-gateway.yaml
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: retail-gateway
+  namespace: retail
+spec:
+  selector:
+    # Use the default Istio Ingress Gateway
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: http
+    hosts:
+    - "mariia.local"
